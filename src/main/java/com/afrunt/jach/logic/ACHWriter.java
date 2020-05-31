@@ -28,6 +28,8 @@ import com.afrunt.jach.domain.FileControl;
 import com.afrunt.jach.metadata.ACHBeanMetadata;
 import com.afrunt.jach.metadata.ACHFieldMetadata;
 import com.afrunt.jach.metadata.ACHMetadata;
+import java8.util.function.Consumer;
+import java8.util.stream.StreamSupport;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -72,11 +74,16 @@ public class ACHWriter extends ACHProcessor {
     public void write(ACHDocument document, OutputStream outputStream, Charset charset) {
         try {
             validateDocument(document);
-            OutputStreamWriter writer = new OutputStreamWriter(outputStream, charset);
+            final OutputStreamWriter writer = new OutputStreamWriter(outputStream, charset);
             lines = 0;
             writeLine(writer, writeRecord(document.getFileHeader()));
 
-            document.getBatches().forEach(b -> writeBatch(b, writer));
+            StreamSupport.stream(document.getBatches()).forEach(new Consumer<ACHBatch>() {
+                @Override
+                public void accept(ACHBatch achBatch) {
+                    writeBatch(achBatch, writer);
+                }
+            });
 
             FileControl fileControl = document.getFileControl();
 
@@ -109,14 +116,18 @@ public class ACHWriter extends ACHProcessor {
         return value == null ? filledWithSpaces(fm.getLength()) : (String) fieldToValue(value, String.class, bm, fm);
     }
 
-    private void writeBatch(ACHBatch batch, OutputStreamWriter writer) {
+    private void writeBatch(ACHBatch batch, final OutputStreamWriter writer) {
         try {
             validateBatch(batch);
 
             writeLine(writer, writeRecord(batch.getBatchHeader()));
 
-            batch.getDetails().forEach(d -> writeBatchDetail(d, writer));
-
+            StreamSupport.stream(batch.getDetails()).forEach(new Consumer<ACHBatchDetail>() {
+                @Override
+                public void accept(ACHBatchDetail achBatchDetail) {
+                    writeBatchDetail(achBatchDetail, writer);
+                }
+            });
             writeLine(writer, writeRecord(batch.getBatchControl()));
         } catch (IOException e) {
             throw error("Error writing ACH batch", e);

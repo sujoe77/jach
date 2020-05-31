@@ -20,10 +20,11 @@ package com.afrunt.jach.document;
 
 import com.afrunt.jach.domain.FileControl;
 import com.afrunt.jach.domain.FileHeader;
+import java8.util.Optional;
+import java8.util.function.Function;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * @author Andrii Frunt
@@ -37,7 +38,7 @@ public class ACHDocument {
     private int numberOfLines;
 
     public ACHDocument addBatch(ACHBatch batch) {
-        batches = batches == null ? new ArrayList<>() : batches;
+        batches = batches == null ? new ArrayList<ACHBatch>() : batches;
         batches.add(batch);
         return this;
     }
@@ -71,8 +72,12 @@ public class ACHDocument {
 
     public int getBatchCount() {
         return Optional.ofNullable(batches)
-                .map(List::size)
-                .orElse(0);
+                .map(new Function<List<ACHBatch>, Integer>() {
+                    @Override
+                    public Integer apply(List<ACHBatch> achBatches) {
+                        return achBatches.size();
+                    }
+                }).orElse(0);
     }
 
     public int getNumberOfLines() {

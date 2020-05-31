@@ -19,6 +19,7 @@
 package com.afrunt.jach.logic;
 
 import com.afrunt.beanmetadata.MetadataCollector;
+import com.afrunt.jach.exception.ACHException;
 import com.afrunt.jach.metadata.ACHBeanMetadata;
 import com.afrunt.jach.metadata.ACHFieldMetadata;
 import com.afrunt.jach.metadata.ACHMetadata;
@@ -46,6 +47,8 @@ public class ACHMetadataCollector extends MetadataCollector<ACHMetadata, ACHBean
     protected ACHFieldMetadata newFieldMetadata() {
         return new ACHFieldMetadata();
     }
+
+    private static final ACHErrorMixIn errorMixIn = new ACHErrorMixInBase();
 
     @Override
     protected void validateFieldMetadata(ACHFieldMetadata fm) {
@@ -87,5 +90,20 @@ public class ACHMetadataCollector extends MetadataCollector<ACHMetadata, ACHBean
                 throwError("The length of date pattern should be equal to field length");
             }
         }
+    }
+
+    @Override
+    public void throwError(String message) throws ACHException {
+        errorMixIn.throwError(message);
+    }
+
+    @Override
+    public ACHException error(String message) {
+        return errorMixIn.error(message);
+    }
+
+    @Override
+    public ACHException error(String message, Throwable e) {
+        return errorMixIn.error(message, e);
     }
 }

@@ -19,17 +19,17 @@
 package com.afrunt.jach.logic;
 
 import com.afrunt.jach.metadata.ACHMetadata;
+import com.google.common.base.Optional;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * @author Andrii Frunt
  */
-class ACHProcessor implements ACHErrorMixIn, ACHFieldConversionSupport {
-    static final String LINE_SEPARATOR = Optional.ofNullable(System.getProperty("line.separator")).orElse("\n");
+class ACHProcessor extends JachACHFieldConversionSupportBase implements ACHErrorMixIn, ACHFieldConversionSupport {
+    static final String LINE_SEPARATOR = Optional.fromNullable(System.getProperty("line.separator")).or("\n");
 
     private final ACHMetadata metadata;
     private final Map<Integer, String> methodNamesCache = new HashMap<>();

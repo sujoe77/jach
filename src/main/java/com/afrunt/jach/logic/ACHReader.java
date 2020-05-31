@@ -18,7 +18,6 @@
  */
 package com.afrunt.jach.logic;
 
-import com.afrunt.beanmetadata.Typed;
 import com.afrunt.jach.ACH;
 import com.afrunt.jach.document.ACHBatch;
 import com.afrunt.jach.document.ACHBatchDetail;
@@ -27,13 +26,18 @@ import com.afrunt.jach.domain.*;
 import com.afrunt.jach.metadata.ACHBeanMetadata;
 import com.afrunt.jach.metadata.ACHFieldMetadata;
 import com.afrunt.jach.metadata.ACHMetadata;
+import java8.util.function.Function;
+import java8.util.function.Predicate;
+import java8.util.stream.Collectors;
+import java8.util.stream.StreamSupport;
 
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static com.afrunt.jach.domain.RecordTypes.*;
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static java8.util.stream.Collectors.joining;
 
 /**
  * @author Andrii Frunt
@@ -143,7 +147,13 @@ public class ACHReader extends ACHProcessor {
         if (numberOfTypes == 1) {
             return typesWithHighestRate.iterator().next();
         } else if (numberOfTypes > 1) {
-            throw error("More than one type found for string " + str + ACHProcessor.LINE_SEPARATOR + " Types: " + typesWithHighestRate.stream().map(Typed::getSimpleTypeName).collect(Collectors.joining(", ")));
+            String types = StreamSupport.stream(typesWithHighestRate).map(new Function<ACHBeanMetadata, String>() {
+                @Override
+                public String apply(ACHBeanMetadata achBeanMetadata) {
+                    return achBeanMetadata.getSimpleTypeName();
+                }
+            }).collect(joining(", "));
+            throw error("More than one type found for string " + str + ACHProcessor.LINE_SEPARATOR + " Types: " + types);
         } else {
             throw error("Type of the string not found");
         }
@@ -166,7 +176,7 @@ public class ACHReader extends ACHProcessor {
         for (ACHBeanMetadata type : types) {
             int rank = rankType(str, type);
             if (rank > 0) {
-                Set<ACHBeanMetadata> rankSet = result.getOrDefault(rank, new HashSet<>());
+                Set<ACHBeanMetadata> rankSet = firstNonNull(result.get(rank), new HashSet<ACHBeanMetadata>());
                 rankSet.add(type);
                 result.put(rank, rankSet);
             }
@@ -290,11 +300,13 @@ public class ACHReader extends ACHProcessor {
             if (!ENTRY_DETAIL.is(currentLine)) {
                 return typeOfString(currentLine);
             } else {
-                Set<ACHBeanMetadata> entryDetailTypes = getMetadata().typesForRecordTypeCode(ENTRY_DETAIL.getRecordTypeCode());
-
-                Set<ACHBeanMetadata> types = entryDetailTypes.stream()
-                        .filter(t -> entryDetailRecordMatch(currentBatch, t))
-                        .collect(Collectors.toSet());
+                final Set<ACHBeanMetadata> entryDetailTypes = getMetadata().typesForRecordTypeCode(ENTRY_DETAIL.getRecordTypeCode());
+                Set<ACHBeanMetadata> types = StreamSupport.stream(entryDetailTypes).filter(new Predicate<ACHBeanMetadata>() {
+                    @Override
+                    public boolean test(ACHBeanMetadata achBeanMetadata) {
+                        return entryDetailRecordMatch(currentBatch, achBeanMetadata);
+                    }
+                }).collect(Collectors.<ACHBeanMetadata>toSet());
 
                 if (types.isEmpty()) {
                     throw error("Type of detail record not found for string: " + currentLine);

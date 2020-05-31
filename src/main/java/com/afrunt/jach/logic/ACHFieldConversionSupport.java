@@ -19,14 +19,11 @@
 package com.afrunt.jach.logic;
 
 import com.afrunt.beanmetadata.FieldConversionSupport;
-import com.afrunt.jach.annotation.ACHField;
 import com.afrunt.jach.metadata.ACHBeanMetadata;
 import com.afrunt.jach.metadata.ACHFieldMetadata;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
@@ -34,88 +31,39 @@ import java.util.Date;
  */
 @SuppressWarnings("WeakerAccess")
 public interface ACHFieldConversionSupport extends FieldConversionSupport<ACHBeanMetadata, ACHFieldMetadata>, ACHErrorMixIn {
-    default Integer valueStringToInteger(String value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        return stringToBigDecimal(value, bm, fm).intValue();
-    }
+    Integer valueStringToInteger(String value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default BigInteger valueStringToBigInteger(String value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        return stringToBigDecimal(value, bm, fm).toBigInteger();
-    }
+    BigInteger valueStringToBigInteger(String value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default Long valueStringToLong(String value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        return stringToBigDecimal(value, bm, fm).longValue();
-    }
+    Long valueStringToLong(String value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default Short valueStringToShort(String value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        return stringToBigDecimal(value, bm, fm).shortValue();
-    }
+    Short valueStringToShort(String value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default Date valueStringToDate(String value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        if (ACHField.EMPTY_DATE_PATTERN.equals(fm.getDateFormat())) {
-            throwError("Date pattern should be specified for field " + fm);
-        }
-        try {
-            return new SimpleDateFormat(fm.getDateFormat()).parse(value);
-        } catch (ParseException e) {
-            throw error("Error parsing date " + value + " with pattern " + fm.getDateFormat() + " for field " + fm, e);
-        }
-    }
+    Date valueStringToDate(String value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default BigDecimal valueStringToBigDecimal(String value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        return moveDecimalRight(stringToBigDecimal(value, bm, fm), fm.getDigitsAfterComma());
-    }
+    BigDecimal valueStringToBigDecimal(String value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default BigDecimal stringToBigDecimal(String value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        if (!StringUtil.isNumeric(value)) {
-            throwError(String.format("Cannot parse string %s to number for field %s", value.trim(), fm));
-        }
+    BigDecimal stringToBigDecimal(String value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-        return new BigDecimal(value.trim());
-    }
+    String fieldStringToString(String value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default String fieldStringToString(String value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        return padString(value, fm.getLength());
-    }
+    String fieldShortToString(Short value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default String fieldShortToString(Short value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        return padNumber(value, fm.getLength());
-    }
+    String fieldIntegerToString(Integer value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default String fieldIntegerToString(Integer value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        return padNumber(value, fm.getLength());
-    }
+    String fieldLongToString(Long value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default String fieldLongToString(Long value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        return padNumber(value, fm.getLength());
-    }
+    String fieldBigIntegerToString(BigInteger value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default String fieldBigIntegerToString(BigInteger value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        return padNumber(value, fm.getLength());
-    }
+    String fieldBigDecimalToString(BigDecimal value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default String fieldBigDecimalToString(BigDecimal value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        return padNumber(String.valueOf(
-                moveDecimalLeft(value, fm.getDigitsAfterComma())
-                        .longValue()), fm.getLength());
-    }
+    String fieldDateToString(Date value, ACHBeanMetadata bm, ACHFieldMetadata fm);
 
-    default String fieldDateToString(Date value, ACHBeanMetadata bm, ACHFieldMetadata fm) {
-        return new SimpleDateFormat(fm.getDateFormat()).format(value);
-    }
+    BigDecimal moveDecimalLeft(BigDecimal number, int digitsAfterComma);
 
-    default BigDecimal moveDecimalLeft(BigDecimal number, int digitsAfterComma) {
-        return number.multiply(BigDecimal.TEN.pow(digitsAfterComma));
-    }
+    BigDecimal moveDecimalRight(BigDecimal number, int digitsAfterComma);
 
-    default BigDecimal moveDecimalRight(BigDecimal number, int digitsAfterComma) {
-        return number.divide(BigDecimal.TEN.pow(digitsAfterComma));
-    }
+    String padString(Object value, int length);
 
-    default String padString(Object value, int length) {
-        return StringUtil.rightPad(value.toString(), length);
-    }
-
-    default String padNumber(Object value, int length) {
-        return StringUtil.leftPad(value.toString(), length, "0");
-    }
+    String padNumber(Object value, int length);
 }

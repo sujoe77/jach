@@ -22,9 +22,9 @@ import com.afrunt.beanmetadata.BeanMetadata;
 import com.afrunt.jach.annotation.ACHField;
 import com.afrunt.jach.annotation.ACHRecordType;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static com.afrunt.jach.logic.StringUtil.nTimes;
 
@@ -43,22 +43,27 @@ public class ACHBeanMetadata extends BeanMetadata<ACHFieldMetadata> {
 
     public List<ACHFieldMetadata> getACHFieldsMetadata() {
         if (achFieldsMetadata == null) {
-            achFieldsMetadata = getFieldsAnnotatedWith(ACHField.class).stream()
-                    .sorted()
-                    .collect(Collectors.toList());
+            achFieldsMetadata = getFieldsAnnotatedWith(ACHField.class);
+            Collections.sort(achFieldsMetadata);
+            return achFieldsMetadata;
         }
         return achFieldsMetadata;
     }
 
     public List<ACHFieldMetadata> getACHTypeTagsMetadata() {
         if (typeTagsMetadata == null) {
-            typeTagsMetadata = getACHFieldsMetadata().stream()
-                    .filter(ACHFieldMetadata::isTypeTag)
-                    .sorted().collect(Collectors.toList());
+            typeTagsMetadata = getACHFieldsMetadata();
+            List<ACHFieldMetadata> ret = new ArrayList();
+            for (ACHFieldMetadata meta : typeTagsMetadata) {
+                if (meta.isTypeTag()) {
+                    ret.add(meta);
+                }
+            }
+            Collections.sort(typeTagsMetadata);
+            typeTagsMetadata = ret;
         }
         return typeTagsMetadata;
     }
-
 
     public boolean recordTypeCodeIs(String recordTypeCode) {
         return recordTypeCode.equals(getRecordTypeCode());
@@ -74,17 +79,14 @@ public class ACHBeanMetadata extends BeanMetadata<ACHFieldMetadata> {
     }
 
     public String getPattern() {
-        return IntStream
-                .range(0, getACHFieldsMetadata().size())
-                .boxed()
-                .map(i -> nTimes(getACHFieldsMetadata().get(i).getLength(), letter(i)))
-                .collect(Collectors.joining());
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < getACHFieldsMetadata().size(); i++) {
+            sb.append(nTimes(getACHFieldsMetadata().get(i).getLength(), letter(i)));
+        }
+        return sb.toString();
     }
-
 
     private String letter(Integer i) {
         return String.valueOf(ALPHABET.charAt(i));
     }
-
-
 }

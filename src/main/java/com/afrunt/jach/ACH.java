@@ -20,17 +20,16 @@ package com.afrunt.jach;
 
 import com.afrunt.jach.document.ACHDocument;
 import com.afrunt.jach.domain.*;
-import com.afrunt.jach.domain.addenda.GeneralAddendaRecord;
 import com.afrunt.jach.domain.addenda.CORAddendaRecord;
+import com.afrunt.jach.domain.addenda.GeneralAddendaRecord;
 import com.afrunt.jach.domain.addenda.POSAddendaRecord;
 import com.afrunt.jach.domain.addenda.ReturnAddendaRecord;
 import com.afrunt.jach.domain.addenda.iat.*;
 import com.afrunt.jach.domain.detail.*;
-import com.afrunt.jach.logic.ACHErrorMixIn;
-import com.afrunt.jach.logic.ACHMetadataCollector;
-import com.afrunt.jach.logic.ACHReader;
-import com.afrunt.jach.logic.ACHWriter;
+import com.afrunt.jach.exception.ACHException;
+import com.afrunt.jach.logic.*;
 import com.afrunt.jach.metadata.ACHMetadata;
+import com.google.common.base.Optional;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -39,16 +38,16 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 
 /**
  * @author Andrii Frunt
  */
 public class ACH implements ACHErrorMixIn {
-    public static final String LINE_SEPARATOR = Optional.ofNullable(System.getProperty("line.separator")).orElse("\n");
+    public static final String LINE_SEPARATOR = Optional.fromNullable(System.getProperty("line.separator")).or("\n");
     public static final Charset DEFAULT_CHARSET = Charset.forName("UTF-8");
-    private static final Set<Class<?>> ACH_CLASSES = new HashSet<>(Arrays.asList(
+    private static final ACHErrorMixIn errorMixIn = new ACHErrorMixInBase();
+    private static final Set<Class<?>> ACH_CLASSES = new HashSet<Class<?>>(Arrays.asList(
             RemittanceIATAddendaRecord.class,
             SixthIATAddendaRecord.class,
             IATAddendaRecord.class,
@@ -168,5 +167,20 @@ public class ACH implements ACHErrorMixIn {
         blockAligning = value;
         writer.setBlockAligning(blockAligning);
         return this;
+    }
+
+    @Override
+    public void throwError(String message) throws ACHException {
+        errorMixIn.throwError(message);
+    }
+
+    @Override
+    public ACHException error(String message) {
+        return errorMixIn.error(message);
+    }
+
+    @Override
+    public ACHException error(String message, Throwable e) {
+        return errorMixIn.error(message, e);
     }
 }

@@ -20,10 +20,11 @@ package com.afrunt.jach.document;
 
 import com.afrunt.jach.domain.BatchControl;
 import com.afrunt.jach.domain.BatchHeader;
+import java8.util.Optional;
+import java8.util.function.Function;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * @author Andrii Frunt
@@ -36,12 +37,16 @@ public class ACHBatch {
 
     public String getBatchType() {
         return Optional.ofNullable(batchHeader)
-                .map(BatchHeader::getStandardEntryClassCode)
-                .orElse(null);
+                .map(new Function<BatchHeader, String>() {
+                    @Override
+                    public String apply(BatchHeader batchHeader) {
+                        return batchHeader.getStandardEntryClassCode();
+                    }
+                }).orElse(null);
     }
 
     public ACHBatch addDetail(ACHBatchDetail detail) {
-        details = details == null ? new ArrayList<>() : details;
+        details = details == null ? new ArrayList<ACHBatchDetail>() : details;
         details.add(detail);
         return this;
     }

@@ -22,9 +22,9 @@ import com.afrunt.beanmetadata.Metadata;
 import com.afrunt.jach.annotation.ACHRecordType;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * @author Andrii Frunt
@@ -42,11 +42,13 @@ public class ACHMetadata extends Metadata<ACHBeanMetadata, ACHFieldMetadata> {
     }
 
     public Set<ACHBeanMetadata> typesForRecordTypeCode(String recordTypeCode) {
-        Set<ACHBeanMetadata> types;
+        Set<ACHBeanMetadata> types = new HashSet();
         if (!typesForRecordTypeCodeCache.containsKey(recordTypeCode)) {
-            types = getACHBeansMetadata().stream()
-                    .filter(b -> b.recordTypeCodeIs(recordTypeCode))
-                    .collect(Collectors.toSet());
+            for (ACHBeanMetadata meta : getACHBeansMetadata()) {
+                if (meta.recordTypeCodeIs(recordTypeCode)) {
+                    types.add(meta);
+                }
+            }
             typesForRecordTypeCodeCache.put(recordTypeCode, types);
         } else {
             types = typesForRecordTypeCodeCache.get(recordTypeCode);

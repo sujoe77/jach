@@ -21,6 +21,8 @@ package com.afrunt.jach.metadata;
 import com.afrunt.beanmetadata.FieldMetadata;
 import com.afrunt.jach.annotation.*;
 import com.afrunt.jach.logic.StringUtil;
+import java8.util.Optional;
+import java8.util.function.Function;
 
 import java.math.BigDecimal;
 import java.text.ParseException;
@@ -108,9 +110,14 @@ public class ACHFieldMetadata extends FieldMetadata implements Comparable<ACHFie
     }
 
     public String getDateFormat() {
-        return getOptionalAnnotation(DateFormat.class)
-                .map(DateFormat::value)
-                .orElse(achAnnotation().dateFormat());
+        Optional<DateFormat> optionalAnnotation = getOptionalAnnotation(DateFormat.class);
+        return optionalAnnotation
+                .map(new Function<DateFormat, String>() {
+                    @Override
+                    public String apply(DateFormat dateFormat) {
+                        return dateFormat.value();
+                    }
+                }).orElse(achAnnotation().dateFormat());
     }
 
     public boolean isTypeTag() {

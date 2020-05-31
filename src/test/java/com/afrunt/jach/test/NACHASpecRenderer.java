@@ -3,17 +3,22 @@ package com.afrunt.jach.test;
 import com.afrunt.jach.ACH;
 import com.afrunt.jach.metadata.ACHBeanMetadata;
 import com.afrunt.jach.metadata.ACHFieldMetadata;
+import java8.util.Comparators;
+import java8.util.function.BiFunction;
+import java8.util.function.BinaryOperator;
+import java8.util.function.Consumer;
+import java8.util.function.Function;
+import java8.util.stream.Collectors;
+import java8.util.stream.IntStreams;
+import java8.util.stream.StreamSupport;
+import org.apache.commons.io.FileUtils;
 
-import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static com.afrunt.jach.logic.StringUtil.letter;
 
@@ -23,25 +28,67 @@ import static com.afrunt.jach.logic.StringUtil.letter;
 public class NACHASpecRenderer {
     private ACH ach = new ACH();
     private List<String> notes = new ArrayList<>();
-    
+
     public String renderFullSpec() {
-        return ach.getMetadata().getACHBeansMetadata().stream()
-                .sorted(Comparator.comparing(ACHBeanMetadata::getRecordTypeCode))
-                .peek(bm -> notes = new ArrayList<>())
-                .map(this::generateSpecBody)
-                .reduce((s1, s2) -> s1 + s2)
-                .map(this::generateHtmlBeanSpec)
-                .orElse("");
+        return StreamSupport.stream(ach.getMetadata().getACHBeansMetadata())
+                .sorted(Comparators.comparing(new Function<ACHBeanMetadata, String>() {
+                    @Override
+                    public String apply(ACHBeanMetadata achBeanMetadata) {
+                        return achBeanMetadata.getRecordTypeCode();
+                    }
+                }))
+                .peek(new Consumer<ACHBeanMetadata>() {
+                    @Override
+                    public void accept(ACHBeanMetadata achBeanMetadata) {
+                        notes = new ArrayList<>();
+                    }
+                })
+                .map(new Function<ACHBeanMetadata, String>() {
+                    @Override
+                    public String apply(ACHBeanMetadata achBeanMetadata) {
+                        return generateSpecBody(achBeanMetadata);
+                    }
+                }).reduce(new BinaryOperator<String>() {
+                    @Override
+                    public String apply(String s, String s2) {
+                        return s + s2;
+                    }
+                }).map(new Function<String, String>() {
+                    @Override
+                    public String apply(String s) {
+                        return generateHtmlBeanSpec(s);
+                    }
+                }).orElse("");
     }
 
     public Map<String, String> renderSingleSpecs() {
         notes = new ArrayList<>();
-        return ach.getMetadata().getACHBeansMetadata().stream()
-                .sorted(Comparator.comparing(ACHBeanMetadata::getRecordTypeCode))
-                .peek(bm -> notes = new ArrayList<>())
-                .collect(Collectors.toMap(bm -> bm.getRecordTypeCode() + "-" + bm.getSimpleTypeName() + ".htm", this::generateHtmlBeanSpec));
+        return StreamSupport.stream(ach.getMetadata().getACHBeansMetadata())
+                .sorted(Comparators.comparing(new Function<ACHBeanMetadata, String>() {
+                    @Override
+                    public String apply(ACHBeanMetadata achBeanMetadata) {
+                        return achBeanMetadata.getRecordTypeCode();
+                    }
+                }))
+                .peek(new Consumer<ACHBeanMetadata>() {
+                    @Override
+                    public void accept(ACHBeanMetadata achBeanMetadata) {
+                        notes = new ArrayList<>();
+                    }
+                })
+                .collect(Collectors.toMap(new Function<ACHBeanMetadata, String>() {
+                    @Override
+                    public String apply(ACHBeanMetadata achBeanMetadata) {
+                        return achBeanMetadata.getRecordTypeCode() + "-" + achBeanMetadata.getSimpleTypeName() + ".htm";
+                    }
+                }, new Function<ACHBeanMetadata, String>() {
+                    @Override
+                    public String apply(ACHBeanMetadata achBeanMetadata) {
+                        return generateHtmlBeanSpec(achBeanMetadata);
+                    }
+                }));
     }
-    
+
     private String generateHtmlBeanSpec(ACHBeanMetadata bm) {
         return generateHtmlBeanSpec(generateSpecBody(bm));
     }
@@ -60,13 +107,43 @@ public class NACHASpecRenderer {
                 .append("<table><tbody>");
 
         sb
-                .append(row("FIELD", bm, (fm, i) -> String.valueOf(i + 1)))
-                .append(row("Data Element Name", bm, (fm, i) -> fm.getAchFieldName()))
-                .append(row("Field Inclusion Requirement", bm, (fm, i) -> fm.getInclusionRequirement().name()))
+                .append(row("FIELD", bm, new BiFunction<ACHFieldMetadata, Integer, String>() {
+                    @Override
+                    public String apply(ACHFieldMetadata achFieldMetadata, Integer integer) {
+                        return String.valueOf(integer + 1);
+                    }
+                }))
+                .append(row("Data Element Name", bm, new BiFunction<ACHFieldMetadata, Integer, String>() {
+                    @Override
+                    public String apply(ACHFieldMetadata fm, Integer integer) {
+                        return fm.getAchFieldName();
+                    }
+                }))
+                .append(row("Field Inclusion Requirement", bm, new BiFunction<ACHFieldMetadata, Integer, String>() {
+                    @Override
+                    public String apply(ACHFieldMetadata fm, Integer integer) {
+                        return fm.getInclusionRequirement().name();
+                    }
+                }))
                 .append(renderContentsRow(bm))
-                .append(row("Length", bm, (fm, i) -> String.valueOf(fm.getLength())))
-                .append(row("Position", bm, (fm, i) -> (fm.getStart() + 1) + "-" + fm.getEnd()))
-                .append(row("Pattern key", bm, (fm, i) -> letter(i)));
+                .append(row("Length", bm, new BiFunction<ACHFieldMetadata, Integer, String>() {
+                    @Override
+                    public String apply(ACHFieldMetadata fm, Integer integer) {
+                        return String.valueOf(fm.getLength());
+                    }
+                }))
+                .append(row("Position", bm, new BiFunction<ACHFieldMetadata, Integer, String>() {
+                    @Override
+                    public String apply(ACHFieldMetadata fm, Integer integer) {
+                        return (fm.getStart() + 1) + "-" + fm.getEnd();
+                    }
+                }))
+                .append(row("Pattern key", bm, new BiFunction<ACHFieldMetadata, Integer, String>() {
+                    @Override
+                    public String apply(ACHFieldMetadata achFieldMetadata, Integer i) {
+                        return letter(i);
+                    }
+                }));
 
         sb.append("</tbody></table>");
 
@@ -80,10 +157,15 @@ public class NACHASpecRenderer {
     private String renderNotes(ACHBeanMetadata bm) {
         if (!notes.isEmpty()) {
             return "<h2>NOTES</h2><ul>"
-                    + IntStream
+                    + IntStreams
                     .range(0, notes.size())
                     .boxed()
-                    .map(this::renderNoteLineItem)
+                    .map(new Function<Integer, String>() {
+                        @Override
+                        public String apply(Integer integer) {
+                            return renderNoteLineItem(integer);
+                        }
+                    })
                     .collect(Collectors.joining())
                     + "</ul>";
         } else {
@@ -101,37 +183,42 @@ public class NACHASpecRenderer {
                 + "</pre>";
     }
 
-    private String row(String firstColumnValue, ACHBeanMetadata bm, BiFunction<ACHFieldMetadata, Integer, String> fmFn) {
-        List<ACHFieldMetadata> achFieldsMetadata = bm.getACHFieldsMetadata();
+    private String row(String firstColumnValue, ACHBeanMetadata bm, final BiFunction<ACHFieldMetadata, Integer, String> fmFn) {
+        final List<ACHFieldMetadata> achFieldsMetadata = bm.getACHFieldsMetadata();
 
-        StringBuilder sb = new StringBuilder()
+        final StringBuilder sb = new StringBuilder()
                 .append("<tr><td>")
                 .append(firstColumnValue)
                 .append("</td>");
 
-        IntStream.range(0, achFieldsMetadata.size())
+        IntStreams.range(0, achFieldsMetadata.size())
                 .boxed()
-                .forEach(i -> sb
-                        .append("<td>")
-                        .append(fmFn.apply(achFieldsMetadata.get(i), i))
-                        .append("</td>")
-                );
-
-        return sb.append(ACH.LINE_SEPARATOR)
-                .toString();
+                .forEach(new Consumer<Integer>() {
+                    @Override
+                    public void accept(Integer i) {
+                        sb.append("<td>").append(fmFn.apply(achFieldsMetadata.get(i), i)).append("</td>");
+                    }
+                });
+        return sb.append(ACH.LINE_SEPARATOR).toString();
     }
 
     private String renderContentsRow(ACHBeanMetadata bm) {
-        return row("Contents", bm,
-                (fm, i) -> renderContentCell(fm)
-        );
+        return row("Contents", bm, new BiFunction<ACHFieldMetadata, Integer, String>() {
+            @Override
+            public String apply(ACHFieldMetadata fm, Integer integer) {
+                return renderContentCell(fm);
+            }
+        });
     }
 
     private String renderContentCell(ACHFieldMetadata fm) {
         if (fm.hasConstantValues() && requiresNote(fm)) {
-
-            notes.add("May contain " + fm.getValues().stream().map(s -> "'" + s + "'").collect(Collectors.joining(", ")));
-
+            notes.add("May contain " + StreamSupport.stream(fm.getValues()).map(new Function<String, String>() {
+                @Override
+                public String apply(String s) {
+                    return "'" + s + "'";
+                }
+            }).collect(Collectors.joining(", ")));
             return fm.getSimpleTypeName() + "<sup>" + notes.size() + "</sup> ";
         } else if (fm.hasConstantValues() && !requiresNote(fm)) {
             return "'" + fm.getValues().iterator().next() + "'";
@@ -152,7 +239,8 @@ public class NACHASpecRenderer {
     private String readFile(String classPath) {
         try {
             Path path = Paths.get(ClassLoader.getSystemResource(classPath).toURI());
-            return Files.readAllLines(path).stream().collect(Collectors.joining(ACH.LINE_SEPARATOR));
+            List<String> lines = FileUtils.readLines(path.toFile(), StandardCharsets.UTF_8);
+            return StreamSupport.stream(lines).collect(Collectors.joining(ACH.LINE_SEPARATOR));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

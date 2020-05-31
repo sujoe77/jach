@@ -33,7 +33,7 @@ public class ACHBatchDetail {
     private List<AddendaRecord> addendaRecords = new ArrayList<>();
 
     public ACHBatchDetail addAddendaRecord(AddendaRecord addendaRecord) {
-        addendaRecords = addendaRecords == null ? new ArrayList<>() : addendaRecords;
+        addendaRecords = addendaRecords == null ? new ArrayList<AddendaRecord>() : addendaRecords;
         addendaRecords.add(addendaRecord);
         return this;
     }

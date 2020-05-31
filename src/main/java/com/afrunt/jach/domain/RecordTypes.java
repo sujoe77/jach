@@ -18,6 +18,9 @@
  */
 package com.afrunt.jach.domain;
 
+import java8.util.function.Predicate;
+import java8.util.stream.StreamSupport;
+
 import java.util.Arrays;
 
 import static com.afrunt.jach.domain.RecordTypes.Constants.*;
@@ -36,9 +39,14 @@ public enum RecordTypes {
         this.recordTypeCode = recordTypeCode;
     }
 
-    public static boolean invalidRecordTypeCode(String recordTypeCode) {
-        return Arrays.stream(RecordTypes.values())
-                .noneMatch(rt -> rt.getRecordTypeCode().equals(recordTypeCode));
+    public static boolean invalidRecordTypeCode(final String recordTypeCode) {
+        return StreamSupport.stream(Arrays.asList(RecordTypes.values()))
+                .noneMatch(new Predicate<RecordTypes>() {
+                    @Override
+                    public boolean test(RecordTypes recordTypes) {
+                        return recordTypes.getRecordTypeCode().equals(recordTypeCode);
+                    }
+                });
     }
 
     public String getRecordTypeCode() {

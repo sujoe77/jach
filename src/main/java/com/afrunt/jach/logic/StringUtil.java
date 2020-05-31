@@ -20,8 +20,6 @@ package com.afrunt.jach.logic;
 
 
 import java.util.Iterator;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * @author Andrii Frunt
@@ -225,11 +223,11 @@ public class StringUtil {
     }
 
     public static String nTimes(int n, String str) {
-        return IntStream
-                .range(0, n)
-                .boxed()
-                .map(o -> str)
-                .collect(Collectors.joining());
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+            sb.append(str);
+        }
+        return sb.toString();
     }
 
     public static String letter(Integer i) {
